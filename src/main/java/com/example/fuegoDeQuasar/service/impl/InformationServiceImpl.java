@@ -32,33 +32,48 @@ import static java.lang.StrictMath.pow;
 @Component
 public class InformationServiceImpl implements InformationService {
 
-    @Autowired
-    private SatelliteRepository satelliteRepository;
+    private final SatelliteRepository satelliteRepository;
 
-    @Autowired
     private MessagesRepository messagesRepository;
 
+    public InformationServiceImpl(SatelliteRepository satelliteRepository) {
+        this.satelliteRepository = satelliteRepository;
+    }
+
+    @Autowired
+    public InformationServiceImpl(SatelliteRepository satelliteRepository, MessagesRepository messagesRepository) {
+        this.satelliteRepository = satelliteRepository;
+        this.messagesRepository = messagesRepository;
+    }
+
+    /**
+     * Crea el mensaje de respuesta que contiene el mensaje secreto y las coordenadas
+     * del emisor una vez se realizaron los calculos.
+     *
+     * @param information Contiene el request con la informacion y distancia de los 3 satelites
+     */
     @Override
     public MessageDTO decodeMessage(InformationDTO information) {
         String message = GetMessage(information);
         PositionDTO position = GetLocation(information);
 
-        MessageDTO messageDTO = MessageDTO
+        return MessageDTO
                 .builder()
                 .position(position)
                 .message(message)
                 .build();
-        return messageDTO;
     }
 
-    @Override
-    public MessageDTO decodeMessageSat(SatelliteDTO satInformation) {
-        MessageDTO messageDTO = MessageDTO
-                .builder()
-                .build();
-        return messageDTO;
-    }
-
+    /**
+     * Recibe el request POST y almacena la informacion en una base de datos en memoria H2
+     * a fin de procesarla mas adelante cuando se haga el request del GET y si se recibe informacion
+     * de un satelite que ya se habia almacenado previamente enntonces se actualiza la informacion
+     * de esta manera solamente pueden haber maximo 3 registros en la tabla de satelites y no se afectaran
+     * los calculos
+     *
+     * @param satInformation Contiene la informacion, distancia y mensaje de 1 satelite
+     * @param name nombre del satelite del cual se recibio la informacion
+     */
     @Override
     public MessageDTO addSatelliteInfo(SatelliteDTO satInformation, String name) {
         try {
@@ -67,48 +82,47 @@ public class InformationServiceImpl implements InformationService {
             satInformation.setNombre(SatelitteEnum.valueOf(name));
             Optional<Satellite> satelite = satelliteRepository.findByNombre(SatelitteEnum.valueOf(name));
 
-            if(satelite.isPresent()){
+            if (satelite.isPresent()) {
                 satelite.get().setDistancia(satInformation.getDistancia());
                 satelliteSaved = satelliteRepository.save(satelite.get());
-            }
-            else{
+            } else {
                 satelliteSaved = satelliteRepository.save(toEntity(satInformation));
             }
-            for(String message: satInformation.getMessage()) {
-                //Optional<Messages> messageFound = messagesRepository
-                //        .findByIdSatelliteAndMessage(satelliteSaved.getId(),message);
+            for (String message : satInformation.getMessage()) {
+                Messages msg = Messages
+                        .builder()
+                        .idSatellite(satelliteSaved.getId())
+                        .message(message)
+                        .build();
 
-                //if(!messageFound.isPresent()) {
-                    Messages msg = Messages
-                            .builder()
-                            .idSatellite(satelliteSaved.getId())
-                            .message(message)
-                            .build();
-
-                    messagesRepository.save(msg);
-                //}
+                messagesRepository.save(msg);
             }
-        }
-        catch(PersistenceException persistenceException){
+        } catch (PersistenceException persistenceException) {
             throw new PersistenceException(SAVING_ERROR);
         }
         return MessageDTO.builder().message(SUCCESSFULLY).build();
     }
 
+    /**
+     * Va a la base de datos en memoria H2 y extrae la informacion contenida en las tablas satelite y menssage
+     * luego arma una instancia de InformationDTO para luego pasarlo como parametro al metodo decodeMessage el cual
+     * tiene la logica para decifrar el mensaje teniendo la informacion de los 3 satelites
+     *
+     */
     @Override
     public MessageDTO getDecodedInfomation() throws Exception {
         List<Satellite> satellites = satelliteRepository.findAll();
         List<SatelliteDTO> satellitesDTOList = new ArrayList<>();
 
-        if(satellites.isEmpty()){
+        if (satellites.isEmpty()) {
             throw new Exception(NO_SAT_INFO);
         }
 
-        if(satellites.size() < AMOUNT_SATS){
+        if (satellites.size() < AMOUNT_SATS) {
             throw new Exception(NO_ENOUGH_SAT_INFO);
         }
 
-        for(Satellite sat: satellites){
+        for (Satellite sat : satellites) {
             List<Messages> messagesList = messagesRepository.findDistinctByIdSatellite(sat.getId());
             SatelliteDTO satelliteDTO = toDTO(sat);
             satelliteDTO.setMessage(convertMessagesToArray(messagesList));
@@ -120,16 +134,20 @@ public class InformationServiceImpl implements InformationService {
                 .satellites(satellitesDTOList)
                 .build();
 
-        MessageDTO messageDTO = decodeMessage(informationDTO);
-
-        return messageDTO;
+        return decodeMessage(informationDTO);
     }
 
+    /**
+     * Este metodo transforma el listado en un arreglo de String ya que con dicho formato es necesario
+     * que sea enviadocomo parametro al metodo que decodificara el mensaje mas adelante
+     *
+     * @param messagesList Recibe un listado de Messages recuperados desde la base de datos H2
+     */
     private String[] convertMessagesToArray(List<Messages> messagesList) {
         String[] result = new String[messagesList.size()];
         int counter = 0;
 
-        for(Messages msg :messagesList){
+        for (Messages msg : messagesList) {
             result[counter] = msg.getMessage();
             counter++;
         }
@@ -137,15 +155,17 @@ public class InformationServiceImpl implements InformationService {
         return result;
     }
 
-
-    // input: distancia al emisor tal cual se recibe en cada satélite
-    // output: las coordenadas ‘x’ e ‘y’ del emisor del mensaje
-    private PositionDTO GetLocation(InformationDTO information){
-        //La solucion se basa en la forma como funciona un GPS
-        //La interseccion de los 3 circulos que forman las 3 distancias
-        //que hay entre el objetivo y cada satelite.
-        //Para eso se usa la ecuacion del circulo r^2 = x^2 + y^2
-        //donde r es el radio x,y son las coordenadas del centro del circulo
+    /**
+     * Este metodo realiza el calculo de ubicacion de emisor.
+     * La solucion se basa en la forma como funciona un GPS
+     * La interseccion de los 3 circulos que forman las 3 distancias
+     * que hay entre el objetivo y cada satelite.
+     * Para eso se usa la ecuacion del circulo r^2 = x^2 + y^2
+     * donde r es el radio x,y son las coordenadas del centro del circulo
+     *
+     * @param information Contiene el request con la informacion y distancia de los 3 satelites
+     */
+    private PositionDTO GetLocation(InformationDTO information) {
         float r1;
         float r2;
         float r3;
@@ -156,8 +176,8 @@ public class InformationServiceImpl implements InformationService {
         float x3;
         float y3;
 
-        Double enemyPositionX;
-        Double enemyPositionY;
+        double enemyPositionX;
+        double enemyPositionY;
 
         List<SatelliteDTO> satellites = information.getSatellites();
 
@@ -192,28 +212,32 @@ public class InformationServiceImpl implements InformationService {
         x3 = satellitePositionDTO3.getPosition().getX();
         y3 = satellitePositionDTO3.getPosition().getY();
 
-        float A = 2*x2 - 2*x1;
-        float B = 2*y2 - 2*y1;
-        Double C = pow(r1,2) - pow(r2,2) - pow(x1,2) + pow(x2,2) - pow(y1,2) + pow(y2,2);
-        float D = 2*x3 - 2*x2;
-        float E = 2*y3 - 2*y2;
-        Double F = pow(r2,2) - pow(r3,2) - pow(x2,2) + pow(x3,2) - pow(y2,2) + pow(y3,2);
-        enemyPositionX = (C*E - F*B) / (E*A - B*D);
-        enemyPositionY = (C*D - A*F) / (B*D - A*E);
+        float A = 2 * x2 - 2 * x1;
+        float B = 2 * y2 - 2 * y1;
+        double C = pow(r1, 2) - pow(r2, 2) - pow(x1, 2) + pow(x2, 2) - pow(y1, 2) + pow(y2, 2);
+        float D = 2 * x3 - 2 * x2;
+        float E = 2 * y3 - 2 * y2;
+        double F = pow(r2, 2) - pow(r3, 2) - pow(x2, 2) + pow(x3, 2) - pow(y2, 2) + pow(y3, 2);
+        enemyPositionX = (C * E - F * B) / (E * A - B * D);
+        enemyPositionY = (C * D - A * F) / (B * D - A * E);
 
-        PositionDTO positionDTO = PositionDTO
+        return PositionDTO
                 .builder()
-                .x(enemyPositionX.floatValue())
-                .y(enemyPositionY.floatValue())
+                .x((float) enemyPositionX)
+                .y((float) enemyPositionY)
                 .build();
-
-        return positionDTO;
     }
 
-    private PositionDTO setPosition(String satName){
+    /**
+     * Este metodo retorna las coordenadas conocidas de cada satelite
+     * para ello recibe el nombre y retorna la posicion
+     *
+     * @param satName Nombre del satelite
+     */
+    private PositionDTO setPosition(String satName) {
         PositionDTO position = null;
 
-        switch(satName){
+        switch (satName) {
             case "kenobi":
                 position = PositionDTO
                         .builder()
@@ -239,37 +263,52 @@ public class InformationServiceImpl implements InformationService {
         return position;
     }
 
-    // input: el mensaje tal cual es recibido en cada satélite
-    // output: el mensaje tal cual lo genera el emisor del mensaje
-    private String GetMessage(InformationDTO information){
+    /**
+     * Este metodo determina el mensaje secreto basado en la superposicion de los mensajes
+     * para asi lograr un mensaje completo basado en la informacion recibida por los 3 satelites
+     *
+     * @param information Contiene el request con la informacion y distancia de los 3 satelites
+     */
+    private String GetMessage(InformationDTO information) {
         String[] messages = new String[information.getSatellites().get(0).getMessage().length];
 
-        for(SatelliteDTO satelliteDTO : information.getSatellites()){
-            for(int position = 0; position < satelliteDTO.getMessage().length; position++) {
+        for (SatelliteDTO satelliteDTO : information.getSatellites()) {
+            for (int position = 0; position < satelliteDTO.getMessage().length; position++) {
                 messages[position] = StringUtils.isEmpty(messages[position]) ? satelliteDTO.getMessage()[position] : messages[position];
             }
         }
 
-        return String.join(" ",messages);
+        return String.join(" ", messages);
     }
 
-    private Satellite toEntity(SatelliteDTO satelliteDTO){
-        Satellite satellite = Satellite
+    /**
+     * Este metodo mapea desde un DTO hacia un Entity para posteriormente ser alomacenado en
+     * la base de datos en memoria H2
+     *
+     * @param satelliteDTO el DTO con la infomracion de 1 satelite
+     */
+    private Satellite toEntity(SatelliteDTO satelliteDTO) {
+
+        return Satellite
                 .builder()
                 .distancia(satelliteDTO.getDistancia())
                 .nombre(satelliteDTO.getNombre())
                 .build();
-
-        return satellite;
     }
 
-    private SatelliteDTO toDTO(Satellite satellite){
-        SatelliteDTO satelliteDTO = SatelliteDTO
+    /**
+     * Este metodo mapea desde un Entity recuperado desde la base de datos H2
+     * hacia un DTO para poder ser seteado mas adelante a un objeto InformationDTO y asi ser procesado
+     * por el metodo decodeMessage
+     *
+     * @param satellite el entity devuelto desde la base de datos referente a 1 satelite
+     */
+    private SatelliteDTO toDTO(Satellite satellite) {
+
+        return SatelliteDTO
                 .builder()
                 .distancia(satellite.getDistancia())
                 .nombre(satellite.getNombre())
                 .build();
-
-        return satelliteDTO;
     }
 }

@@ -7,7 +7,6 @@ import com.example.fuegoDeQuasar.enums.SatelitteEnum;
 import com.example.fuegoDeQuasar.service.InformationService;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,8 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class InformationController {
 
-    @Autowired
-    private InformationService service;
+    private final InformationService service;
+
+    public InformationController(InformationService service) {
+        this.service = service;
+    }
 
     @ApiOperation(value = "Get information from satellite")
     @PostMapping(value = "topsecret", produces = MediaType.APPLICATION_JSON_VALUE)

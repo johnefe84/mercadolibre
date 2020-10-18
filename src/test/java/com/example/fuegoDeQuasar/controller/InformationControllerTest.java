@@ -4,10 +4,11 @@ import com.example.fuegoDeQuasar.dto.InformationDTO;
 import com.example.fuegoDeQuasar.dto.MessageDTO;
 import com.example.fuegoDeQuasar.dto.PositionDTO;
 import com.example.fuegoDeQuasar.service.InformationService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,7 @@ public class InformationControllerTest {
 
     @Test
     public void testGetInformationFromSatellites() {
+        MockitoAnnotations.initMocks(this);
         final float xPosition = -487.28592f;
         final float yPosition = 1557.0143f;
 

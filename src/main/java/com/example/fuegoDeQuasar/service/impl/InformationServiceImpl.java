@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.fuegoDeQuasar.util.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -86,7 +87,7 @@ public class InformationServiceImpl implements InformationService {
                 satelite.get().setDistancia(satInformation.getDistancia());
                 satelliteSaved = satelliteRepository.save(satelite.get());
             } else {
-                satelliteSaved = satelliteRepository.save(toEntity(satInformation));
+                satelliteSaved = satelliteRepository.save(Mapper.toEntity(satInformation));
             }
             for (String message : satInformation.getMessage()) {
                 Messages msg = Messages
@@ -124,7 +125,7 @@ public class InformationServiceImpl implements InformationService {
 
         for (Satellite sat : satellites) {
             List<Messages> messagesList = messagesRepository.findDistinctByIdSatellite(sat.getId());
-            SatelliteDTO satelliteDTO = toDTO(sat);
+            SatelliteDTO satelliteDTO = Mapper.toDTO(sat);
             satelliteDTO.setMessage(convertMessagesToArray(messagesList));
             satellitesDTOList.add(satelliteDTO);
         }
@@ -279,36 +280,5 @@ public class InformationServiceImpl implements InformationService {
         }
 
         return String.join(" ", messages);
-    }
-
-    /**
-     * Este metodo mapea desde un DTO hacia un Entity para posteriormente ser alomacenado en
-     * la base de datos en memoria H2
-     *
-     * @param satelliteDTO el DTO con la infomracion de 1 satelite
-     */
-    private Satellite toEntity(SatelliteDTO satelliteDTO) {
-
-        return Satellite
-                .builder()
-                .distancia(satelliteDTO.getDistancia())
-                .nombre(satelliteDTO.getNombre())
-                .build();
-    }
-
-    /**
-     * Este metodo mapea desde un Entity recuperado desde la base de datos H2
-     * hacia un DTO para poder ser seteado mas adelante a un objeto InformationDTO y asi ser procesado
-     * por el metodo decodeMessage
-     *
-     * @param satellite el entity devuelto desde la base de datos referente a 1 satelite
-     */
-    private SatelliteDTO toDTO(Satellite satellite) {
-
-        return SatelliteDTO
-                .builder()
-                .distancia(satellite.getDistancia())
-                .nombre(satellite.getNombre())
-                .build();
     }
 }

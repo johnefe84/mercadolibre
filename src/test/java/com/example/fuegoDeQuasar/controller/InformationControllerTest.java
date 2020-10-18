@@ -31,7 +31,7 @@ public class InformationControllerTest {
     private InformationService service;
 
     @Test
-    public void testGetInformationFromSatellites() {
+    public void getInformationFromSatellitesTest() {
         MockitoAnnotations.initMocks(this);
         final float xPosition = -487.28592f;
         final float yPosition = 1557.0143f;
@@ -48,5 +48,20 @@ public class InformationControllerTest {
         assertEquals(HttpStatus.OK, successResult.getStatusCode());
 
         verify(service).decodeMessage(any(InformationDTO.class));
+    }
+
+    @Test
+    public void postInformationFromSatelliteTest(){
+
+    }
+
+    @Test
+    public void getInformationFromSatelliteTest(){
+
+    }
+
+    @Test
+    public void signupTest(){
+
     }
 }

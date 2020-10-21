@@ -69,8 +69,8 @@ jacocoTestReport {
 	}
 	afterEvaluate {
 		getClassDirectories().setFrom(files(classDirectories.files.collect {
-			fileTree(dir: it, exclude: ['com/globant/microservice/config/**',
-										'com/globant/microservice/dto/**'])
+			fileTree(dir: it, exclude: ['com/example/fuegoDeQuasar/config/**',
+										'com/example/fuegoDeQuasar/security/**'])
 		}))
 	}
 }

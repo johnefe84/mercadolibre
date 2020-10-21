@@ -11,12 +11,11 @@ public class Mapper {
      * @param satelliteDTO el DTO con la infomracion de 1 satelite
      */
     public static Satellite toEntity(SatelliteDTO satelliteDTO) {
+        Satellite satellite = new Satellite();
+        satellite.setDistancia(satelliteDTO.getDistancia());
+        satellite.setNombre(satelliteDTO.getNombre());
 
-        return Satellite
-                .builder()
-                .distancia(satelliteDTO.getDistancia())
-                .nombre(satelliteDTO.getNombre())
-                .build();
+        return satellite;
     }
 
     /**
@@ -28,10 +27,10 @@ public class Mapper {
      */
     public static SatelliteDTO toDTO(Satellite satellite) {
 
-        return SatelliteDTO
-                .builder()
-                .distancia(satellite.getDistancia())
-                .nombre(satellite.getNombre())
-                .build();
+        SatelliteDTO satelliteDTO = new SatelliteDTO();
+        satelliteDTO.setDistancia(satellite.getDistancia());
+        satelliteDTO.setNombre(satellite.getNombre());
+
+        return satelliteDTO;
     }
 }

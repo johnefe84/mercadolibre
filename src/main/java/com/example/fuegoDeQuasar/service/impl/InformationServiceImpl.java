@@ -257,10 +257,10 @@ public class InformationServiceImpl implements InformationService {
      * @param information Contiene el request con la informacion y distancia de los 3 satelites
      */
     private String GetMessage(InformationDTO information) {
-        String[] messages = new String[information.getSatellites().get(0).getMessage().length];
+        String[] messages = new String[5];
 
         for (SatelliteDTO satelliteDTO : information.getSatellites()) {
-            for (int position = 0; position < satelliteDTO.getMessage().length; position++) {
+            for (int position = 0; position < 5; position++) {
                 messages[position] = StringUtils.isEmpty(messages[position]) ? satelliteDTO.getMessage()[position] : messages[position];
             }
         }

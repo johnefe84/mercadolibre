@@ -1,6 +1,7 @@
 package com.example.fuegoDeQuasar.config;
 
 import com.example.fuegoDeQuasar.dto.MessageDTO;
+import com.example.fuegoDeQuasar.exception.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -14,7 +15,19 @@ public class ExceptionManager {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<MessageDTO> defaultErrorHandler(Exception e) {
-        MessageDTO responseDTO = new MessageDTO(null,FAILURE+ e.getMessage());
+        MessageDTO responseDTO = new MessageDTO();
+        responseDTO.setMessage(FAILURE+e.getMessage());
+        responseDTO.setPosition(null);
+
         return new ResponseEntity<>(responseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<MessageDTO> jwtErrorHandler(Exception e) {
+        MessageDTO responseDTO = new MessageDTO();
+        responseDTO.setMessage(FAILURE+e.getMessage());
+        responseDTO.setPosition(null);
+        return new ResponseEntity<>(responseDTO, HttpStatus.FORBIDDEN);
     }
 }

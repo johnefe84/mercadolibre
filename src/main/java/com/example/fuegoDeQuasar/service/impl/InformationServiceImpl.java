@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.fuegoDeQuasar.util.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -57,11 +58,11 @@ public class InformationServiceImpl implements InformationService {
         String message = GetMessage(information);
         PositionDTO position = GetLocation(information);
 
-        return MessageDTO
-                .builder()
-                .position(position)
-                .message(message)
-                .build();
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setPosition(position);
+        messageDTO.setMessage(message);
+
+        return messageDTO;
     }
 
     /**
@@ -86,21 +87,23 @@ public class InformationServiceImpl implements InformationService {
                 satelite.get().setDistancia(satInformation.getDistancia());
                 satelliteSaved = satelliteRepository.save(satelite.get());
             } else {
-                satelliteSaved = satelliteRepository.save(toEntity(satInformation));
+                satelliteSaved = satelliteRepository.save(Mapper.toEntity(satInformation));
             }
             for (String message : satInformation.getMessage()) {
-                Messages msg = Messages
-                        .builder()
-                        .idSatellite(satelliteSaved.getId())
-                        .message(message)
-                        .build();
+                Messages msg = new Messages();
+                msg.setIdSatellite(satelliteSaved.getId());
+                msg.setMessage(message);
 
                 messagesRepository.save(msg);
             }
         } catch (PersistenceException persistenceException) {
             throw new PersistenceException(SAVING_ERROR);
         }
-        return MessageDTO.builder().message(SUCCESSFULLY).build();
+
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setMessage(SUCCESSFULLY);
+
+        return messageDTO;
     }
 
     /**
@@ -124,15 +127,14 @@ public class InformationServiceImpl implements InformationService {
 
         for (Satellite sat : satellites) {
             List<Messages> messagesList = messagesRepository.findDistinctByIdSatellite(sat.getId());
-            SatelliteDTO satelliteDTO = toDTO(sat);
+            SatelliteDTO satelliteDTO = Mapper.toDTO(sat);
             satelliteDTO.setMessage(convertMessagesToArray(messagesList));
             satellitesDTOList.add(satelliteDTO);
         }
 
-        InformationDTO informationDTO = InformationDTO
-                .builder()
-                .satellites(satellitesDTOList)
-                .build();
+        InformationDTO informationDTO = new InformationDTO();
+        informationDTO.setSatellites(satellitesDTOList);
+
 
         return decodeMessage(informationDTO);
     }
@@ -181,23 +183,17 @@ public class InformationServiceImpl implements InformationService {
 
         List<SatelliteDTO> satellites = information.getSatellites();
 
-        SatellitePositionDTO satellitePositionDTO1 = SatellitePositionDTO
-                .builder()
-                .satellite(satellites.get(0))
-                .position(setPosition(satellites.get(0).getNombre().name()))
-                .build();
+        SatellitePositionDTO satellitePositionDTO1 = new SatellitePositionDTO();
+        satellitePositionDTO1.setSatellite(satellites.get(0));
+        satellitePositionDTO1.setPosition(setPosition(satellites.get(0).getNombre().name()));
 
-        SatellitePositionDTO satellitePositionDTO2 = SatellitePositionDTO
-                .builder()
-                .satellite(satellites.get(1))
-                .position(setPosition(satellites.get(1).getNombre().name()))
-                .build();
+        SatellitePositionDTO satellitePositionDTO2 = new SatellitePositionDTO();
+        satellitePositionDTO2.setSatellite(satellites.get(1));
+        satellitePositionDTO2.setPosition(setPosition(satellites.get(1).getNombre().name()));
 
-        SatellitePositionDTO satellitePositionDTO3 = SatellitePositionDTO
-                .builder()
-                .satellite(satellites.get(2))
-                .position(setPosition(satellites.get(2).getNombre().name()))
-                .build();
+        SatellitePositionDTO satellitePositionDTO3 = new SatellitePositionDTO();
+        satellitePositionDTO3.setSatellite(satellites.get(2));
+        satellitePositionDTO3.setPosition(setPosition(satellites.get(2).getNombre().name()));
 
         r1 = satellites.get(0).getDistancia();
         r2 = satellites.get(1).getDistancia();
@@ -221,11 +217,11 @@ public class InformationServiceImpl implements InformationService {
         enemyPositionX = (C * E - F * B) / (E * A - B * D);
         enemyPositionY = (C * D - A * F) / (B * D - A * E);
 
-        return PositionDTO
-                .builder()
-                .x((float) enemyPositionX)
-                .y((float) enemyPositionY)
-                .build();
+        PositionDTO positionDTO = new PositionDTO();
+        positionDTO.setX((float) enemyPositionX);
+        positionDTO.setY((float) enemyPositionY);
+
+        return positionDTO;
     }
 
     /**
@@ -235,29 +231,20 @@ public class InformationServiceImpl implements InformationService {
      * @param satName Nombre del satelite
      */
     private PositionDTO setPosition(String satName) {
-        PositionDTO position = null;
+        PositionDTO position = new PositionDTO();
 
         switch (satName) {
             case "kenobi":
-                position = PositionDTO
-                        .builder()
-                        .x(-500)
-                        .y(-200)
-                        .build();
+                position.setX(-500f);
+                position.setY(-200f);
                 break;
             case "skywalker":
-                position = PositionDTO
-                        .builder()
-                        .x(100)
-                        .y(-100)
-                        .build();
+                position.setX(100f);
+                position.setY(-100f);
                 break;
             case "sato":
-                position = PositionDTO
-                        .builder()
-                        .x(500)
-                        .y(100)
-                        .build();
+                position.setX(500f);
+                position.setY(100f);
                 break;
         }
         return position;
@@ -270,45 +257,14 @@ public class InformationServiceImpl implements InformationService {
      * @param information Contiene el request con la informacion y distancia de los 3 satelites
      */
     private String GetMessage(InformationDTO information) {
-        String[] messages = new String[information.getSatellites().get(0).getMessage().length];
+        String[] messages = new String[5];
 
         for (SatelliteDTO satelliteDTO : information.getSatellites()) {
-            for (int position = 0; position < satelliteDTO.getMessage().length; position++) {
+            for (int position = 0; position < 5; position++) {
                 messages[position] = StringUtils.isEmpty(messages[position]) ? satelliteDTO.getMessage()[position] : messages[position];
             }
         }
 
         return String.join(" ", messages);
-    }
-
-    /**
-     * Este metodo mapea desde un DTO hacia un Entity para posteriormente ser alomacenado en
-     * la base de datos en memoria H2
-     *
-     * @param satelliteDTO el DTO con la infomracion de 1 satelite
-     */
-    private Satellite toEntity(SatelliteDTO satelliteDTO) {
-
-        return Satellite
-                .builder()
-                .distancia(satelliteDTO.getDistancia())
-                .nombre(satelliteDTO.getNombre())
-                .build();
-    }
-
-    /**
-     * Este metodo mapea desde un Entity recuperado desde la base de datos H2
-     * hacia un DTO para poder ser seteado mas adelante a un objeto InformationDTO y asi ser procesado
-     * por el metodo decodeMessage
-     *
-     * @param satellite el entity devuelto desde la base de datos referente a 1 satelite
-     */
-    private SatelliteDTO toDTO(Satellite satellite) {
-
-        return SatelliteDTO
-                .builder()
-                .distancia(satellite.getDistancia())
-                .nombre(satellite.getNombre())
-                .build();
     }
 }

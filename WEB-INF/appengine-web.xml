@@ -3,5 +3,5 @@
   <application>FuegoDeQuasarApplication</application>
   <version>beta-001</version>
   <threadsafe>true</threadsafe>
-  <runtime>java8</runtime>
+  <runtime>java11</runtime>
 </appengine-web-app>

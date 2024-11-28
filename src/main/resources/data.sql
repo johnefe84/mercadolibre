@@ -25,4 +25,4 @@ CREATE TABLE IF NOT EXISTS user
     password   VARCHAR(50)
 );
 
---INSERT INTO user(username,password,email) VALUES('meli','$2a$12$lgHEEh7pdOZ.L2TE1dm2de1Pn44uGHqGnWKNOq.I2NaVQQUz9xTEW','user@gmail.com');
+INSERT INTO user(username,password,email) VALUES('meli','$2a$12$lgHEEh7pdOZ.L2TE1dm2de1Pn44uGHqGnWKNOq.I2NaVQQUz9xTEW','user@gmail.com');
